@@ -78,10 +78,10 @@ Create the following projects for CI/CD components, Dev and Stage environments:
 And then deploy the demo:
 
   ```
-  # Deploy Demo
+  # Grant scc 'privileged' to service account 'gogs'
   oc edit scc privileged
   
-  add below to scc 'users':
+  add the line below to scc 'users':
   - system:serviceaccount:cicd:gogs
 
   # Deploy Demo
