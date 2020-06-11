@@ -79,6 +79,12 @@ And then deploy the demo:
 
   ```
   # Deploy Demo
+  oc edit scc privileged
+  
+  add below to scc 'users':
+  - system:serviceaccount:cicd:gogs
+
+  # Deploy Demo
   oc new-app jenkins-ephemeral -n cicd  
   oc new-app -n cicd -f cicd-template.yaml
   ```

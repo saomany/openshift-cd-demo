@@ -330,7 +330,7 @@ objects:
             if [ "${EPHEMERAL}" == "true" ] ; then
               oc new-app -f https://raw.githubusercontent.com/saomany/openshift-cd-demo/master/gogs-template-ephemeral.yaml \
                   --param=GOGS_VERSION=0.11.34 \
-                  --param=DATABASE_VERSION=9.6 \
+                  --param=DATABASE_VERSION=10 \
                   --param=HOSTNAME=$GOGS_HOSTNAME \
                   --param=SKIP_TLS_VERIFY=true
             else
@@ -422,7 +422,7 @@ objects:
             oc label dc nexus "app.kubernetes.io/part-of"="nexus" --overwrite
             oc label dc gogs "app.kubernetes.io/part-of"="gogs" --overwrite
             oc label dc gogs-postgresql "app.kubernetes.io/part-of"="gogs" --overwrite
-          image: quay.io/openshift/origin-cli:v4.0
+          image: saomany/origin-cli:ppc64le
           name: cicd-demo-installer-job
           resources: {}
           terminationMessagePath: /dev/termination-log
