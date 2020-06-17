@@ -1,0 +1,3 @@
+FROM saomany/wildfly:ppc64le
+
+ADD ROOT.war ./wildfly/standalone/deployments

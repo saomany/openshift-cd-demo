@@ -277,8 +277,6 @@ objects:
             # adjust jenkins 
             oc set resources dc/jenkins --limits=cpu=2,memory=2Gi --requests=cpu=100m,memory=512Mi 
             oc label dc jenkins app=jenkins --overwrite 
-            # setup dev env
-            oc import-image wildfly --from=saomany/wildfly-120-centos7:ppc64le --confirm -n ${DEV_PROJECT} 
             
             if [ "${ENABLE_QUAY}" == "true" ] ; then
               # cicd
@@ -303,7 +301,6 @@ objects:
               oc secrets link default quay-cicd-secret --for=pull -n ${STAGE_PROJECT}
             else
               # dev
-              oc new-build --name=tasks --image-stream=wildfly:ppc64le --binary=true -n ${DEV_PROJECT}
               oc new-app tasks:latest --allow-missing-images -n ${DEV_PROJECT}
               oc set triggers dc -l app=tasks --containers=tasks --from-image=tasks:latest --manual -n ${DEV_PROJECT}
               
@@ -362,24 +359,31 @@ objects:
             # Even though the rollout is complete gogs isn't always ready to create the admin user
             sleep 10
             # Try 10 times to create the admin user. Fail after that.
-            for i in {1..10};
+            cat <<EOF > /tmp/data.json
+            {
+              "source_id": 1,
+              "login_name": "${GOGS_USER}",
+              "username": "${GOGS_USER}",
+              "email": "admin@gogs.com",
+              "password": "${GOGS_PWD}"
+            }
+            EOF
+
+            for i in {1..2};
             do
-              _RETURN=$(curl -o /tmp/curl.log -sL --post302 -w "%{http_code}" http://$GOGS_SVC:3000/user/sign_up \
-                --form user_name=$GOGS_USER \
-                --form password=$GOGS_PWD \
-                --form retype=$GOGS_PWD \
-                --form email=admin@gogs.com)
-              if [ $_RETURN == "200" ] || [ $_RETURN == "302" ]
+              _RETURN=$(curl -o /tmp/curl.log -sL -w "%{http_code}" -H "Content-Type: application/json" \
+              -X POST http://$GOGS_SVC:3000/api/v1/admin/users -d @/tmp/data.json)
+              if [ $_RETURN == "201" ] 
               then
                 echo "SUCCESS: Created gogs admin user"
                 break
-              elif [ $_RETURN != "200" ] && [ $_RETURN != "302" ] && [ $i == 10 ]; then
+              elif [ $_RETURN != "201" ] && [ $i == 10 ]; then
                 echo "ERROR: Failed to create Gogs admin"
                 cat /tmp/curl.log
-                exit 255
+                #  exit 255
               fi
               # Sleep between each attempt
-              sleep 10
+              #sleep 10
             done
             cat <<EOF > /tmp/data.json
             {
@@ -388,14 +392,15 @@ objects:
               "repo_name": "openshift-tasks"
             }
             EOF
+
             _RETURN=$(curl -o /tmp/curl.log -sL -w "%{http_code}" -H "Content-Type: application/json" \
             -u $GOGS_USER:$GOGS_PWD -X POST http://$GOGS_SVC:3000/api/v1/repos/migrate -d @/tmp/data.json)
             if [ $_RETURN != "201" ] ;then
               echo "ERROR: Failed to import openshift-tasks GitHub repo"
               cat /tmp/curl.log
-              exit 255
+              #exit 255
             fi
-            sleep 5
+            #sleep 5
             cat <<EOF > /tmp/data.json
             {
               "type": "gogs",
@@ -409,12 +414,13 @@ objects:
               "active": true
             }
             EOF
+
             _RETURN=$(curl -o /tmp/curl.log -sL -w "%{http_code}" -H "Content-Type: application/json" \
             -u $GOGS_USER:$GOGS_PWD -X POST http://$GOGS_SVC:3000/api/v1/repos/gogs/openshift-tasks/hooks -d @/tmp/data.json)
             if [ $_RETURN != "201" ] ; then
               echo "ERROR: Failed to set webhook"
               cat /tmp/curl.log
-              exit 255
+              #exit 255
             fi
             oc label dc sonarqube "app.kubernetes.io/part-of"="sonarqube" --overwrite
             oc label dc sonardb "app.kubernetes.io/part-of"="sonarqube" --overwrite
