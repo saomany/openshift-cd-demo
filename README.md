@@ -87,6 +87,25 @@ And then deploy the demo:
   # Deploy Demo
   oc new-app jenkins-ephemeral -n cicd  
   oc new-app -n cicd -f cicd-template.yaml
+
+  # Setup Gogs
+  Go to gogs web UI (http://gogs-cicd.apps.ocp4.stg.io/).
+  1) Sign up an account using username/password: 'gogs/gogs'.
+  2) Log in with 'gogs' and create a repository 'openshift-tasks' by importing 'https://github.com/OpenShiftDemos/openshift-tasks.git'.
+  3) Add a webhook 'https://openshift.default.svc.cluster.local/apis/build.openshift.io/v1/namespaces/cicd/buildconfigs/tasks-pipeline/webhooks/IokdMIIh/generic' 
+              "type": "gogs",
+              "config": {
+                "url": "https://openshift.default.svc.cluster.local/apis/build.openshift.io/v1/namespaces/cicd/buildconfigs/tasks-pipeline/webhooks/${WEBHOOK_SECRET}/generic",
+                "content_type": "json"
+              },
+              "events": [
+                "push"
+              ],
+              "active": true
+  The exact value of ${WEBHOOK_SECRET} can be get from 'oc edit -n cicd buildconfig.build.openshift.io/tasks-pipeline' and search 'Generic'
+
+  # Create build config 'tasks'
+  cat Dockerfile.tasks | oc new-build -D - --name tasks -n dev
   ```
 
 To use custom project names, change `cicd`, `dev` and `stage` in the above commands to
